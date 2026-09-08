@@ -14,9 +14,11 @@ public class ProductResponse {
     private String serialNumber;
     private String conditionStatus;
     private String itemStatus;
+    private String category;
     private LocalDate warrantyStartDate;
     private LocalDate warrantyEndDate;
     private String note;
+    private String images;
     private BigDecimal price;
     private Long organizationId;
 }

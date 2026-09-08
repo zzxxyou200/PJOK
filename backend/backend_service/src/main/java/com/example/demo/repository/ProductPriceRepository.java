@@ -28,4 +28,15 @@ public interface ProductPriceRepository extends JpaRepository<ProductPrice, Long
             @Param("now") LocalDateTime now);
 
     List<ProductPrice> findByOrganizationId(Long organizationId);
+
+    @Query("""
+            SELECT DISTINCT p.productId FROM ProductPrice p
+            WHERE p.organizationId = :organizationId
+              AND p.status = 'ACTIVE'
+              AND p.effectiveFrom <= :now
+              AND (p.effectiveTo IS NULL OR p.effectiveTo >= :now)
+            """)
+    List<Long> findProductIdsWithActivePrice(
+            @Param("organizationId") Long organizationId,
+            @Param("now") LocalDateTime now);
 }

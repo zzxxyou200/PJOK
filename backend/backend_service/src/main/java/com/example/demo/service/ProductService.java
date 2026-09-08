@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +38,28 @@ public class ProductService {
                 .toList();
     }
 
+    public List<ProductResponse> getPricedProductsForUser(String username, String category) {
+        Long organizationId = userRepository.findByUsername(username)
+                .map(User::getOrganizationId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+        if (organizationId == null) {
+            return List.of();
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Set<Long> pricedProductIds = Set.copyOf(
+                productPriceRepository.findProductIdsWithActivePrice(organizationId, now));
+
+        boolean filterByCategory = category != null && !category.isBlank() && !category.equalsIgnoreCase("All");
+
+        return productItemRepository.findAll().stream()
+                .filter(item -> pricedProductIds.contains(item.getProductId()))
+                .filter(item -> !filterByCategory || category.equalsIgnoreCase(item.getCategory()))
+                .map(item -> toResponse(item, organizationId, now))
+                .toList();
+    }
+
     private ProductResponse toResponse(ProductItem item, Long organizationId, LocalDateTime now) {
         BigDecimal price = null;
 
@@ -55,9 +78,11 @@ public class ProductService {
                 .serialNumber(item.getSerialNumber())
                 .conditionStatus(item.getConditionStatus())
                 .itemStatus(item.getItemStatus())
+                .category(item.getCategory())
                 .warrantyStartDate(item.getWarrantyStartDate())
                 .warrantyEndDate(item.getWarrantyEndDate())
                 .note(item.getNote())
+                .images(item.getImages())
                 .price(price)
                 .organizationId(organizationId)
                 .build();

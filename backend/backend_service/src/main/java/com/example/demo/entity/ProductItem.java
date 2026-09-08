@@ -34,6 +34,9 @@ public class ProductItem {
     @Column(name = "item_status")
     private String itemStatus;
 
+    @Column(name = "category")
+    private String category;
+
     @Column(name = "warranty_start_date")
     private LocalDate warrantyStartDate;
 
@@ -42,6 +45,9 @@ public class ProductItem {
 
     @Column(length = 500)
     private String note;
+
+    @Column(columnDefinition = "TEXT")
+    private String images;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;

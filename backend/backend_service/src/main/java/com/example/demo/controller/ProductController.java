@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -20,5 +21,12 @@ public class ProductController {
     @GetMapping
     public List<ProductResponse> getProducts(Authentication authentication) {
         return productService.getProductsForUser(authentication.getName());
+    }
+
+    @GetMapping("/priced")
+    public List<ProductResponse> getPricedProducts(
+            @RequestParam(required = false) String category,
+            Authentication authentication) {
+        return productService.getPricedProductsForUser(authentication.getName(), category);
     }
 }

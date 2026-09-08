@@ -2,6 +2,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   AppBar, Toolbar, Button, Box,
 } from '@mui/material';
+import { Storefront } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
 function Navbar() {
@@ -22,31 +23,32 @@ function Navbar() {
   ];
 
   return (
-    <AppBar position="static">
+    <AppBar position="static" className="appbar">
       <Toolbar>
-        <Button component={RouterLink} to="/" color="inherit" sx={{ fontWeight: 'bold', mr: 2 }}>
+        <Button component={RouterLink} to="/" className="appbar-brand">
+          <Storefront className="appbar-brand-icon" />
           SomeShop
         </Button>
-        <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
+        <Box className="appbar-links">
           {isAuthenticated && menuItems.map((item) => (
-            <Button key={item.to} component={RouterLink} to={item.to} color="inherit">
+            <Button key={item.to} component={RouterLink} to={item.to} className="appbar-link">
               {item.label}
             </Button>
           ))}
         </Box>
         {isAuthenticated ? (
-          <Button color="inherit" onClick={handleLogout}>
+          <Button className="appbar-link appbar-logout" onClick={handleLogout}>
             Logout
           </Button>
         ) : (
-          <>
-            <Button component={RouterLink} to="/login" color="inherit">
+          <Box className="appbar-auth">
+            <Button component={RouterLink} to="/login" className="appbar-link">
               Login
             </Button>
-            <Button component={RouterLink} to="/register" color="inherit">
+            <Button component={RouterLink} to="/register" className="appbar-link appbar-register">
               Register
             </Button>
-          </>
+          </Box>
         )}
       </Toolbar>
     </AppBar>
