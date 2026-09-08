@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: demo-service
+
+  # --- MySQL DB (Docker: docker compose up -d) ---
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:6787/Cust_detail}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:admin}
+    password: ${DB_PASSWORD:123}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  # --- Uncomment and adjust to use PostgreSQL instead ---
+  # datasource:
+  #   url: jdbc:postgresql://localhost:5432/demodb
+  #   username: postgres
+  #   password: postgres
+  #   driver-class-name: org.postgresql.Driver
+
+  # --- Uncomment and adjust to use Oracle instead (also uncomment ojdbc11 dependency in pom.xml) ---
+  # datasource:
+  #   url: jdbc:oracle:thin:@localhost:1521/ORCLPDB1
+  #   username: app_user
+  #   password: app_password
+  #   driver-class-name: oracle.jdbc.OracleDriver
+
+app:
+  jwt:
+    # Strong random secret for signing access/refresh tokens (>= 256 bits)
+    secret: ${JWT_SECRET:ZmVkMWZjZmItOWQ2MS00N2E4LTg5YmUtZjE0YTEyM2Q0NWNiLWp3dHNlY3JldC1rZXktMjAyNg==}
+    access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}    # 15 minutes
+    refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000} # 7 days
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

@@ -1,0 +1,31 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: someshop-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: Cust_detail
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: "123"
+    ports:
+      - "6787:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer:latest
+    container_name: someshop-adminer
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    ports:
+      - "6768:8080"
+
+volumes:
+  mysql_data:
