@@ -16,7 +16,6 @@ public interface ProductPriceRepository extends JpaRepository<ProductPrice, Long
             SELECT p FROM ProductPrice p
             WHERE p.productId = :productId
               AND p.organizationId = :organizationId
-              AND p.status = :status
               AND p.effectiveFrom <= :now
               AND (p.effectiveTo IS NULL OR p.effectiveTo >= :now)
             ORDER BY p.effectiveFrom DESC
@@ -24,7 +23,6 @@ public interface ProductPriceRepository extends JpaRepository<ProductPrice, Long
     List<ProductPrice> findCurrentPrices(
             @Param("productId") Long productId,
             @Param("organizationId") Long organizationId,
-            @Param("status") PriceStatus status,
             @Param("now") LocalDateTime now);
 
     List<ProductPrice> findByOrganizationId(Long organizationId);
@@ -32,11 +30,10 @@ public interface ProductPriceRepository extends JpaRepository<ProductPrice, Long
     @Query("""
             SELECT DISTINCT p.productId FROM ProductPrice p
             WHERE p.organizationId = :organizationId
-              AND p.status = 'ACTIVE'
               AND p.effectiveFrom <= :now
               AND (p.effectiveTo IS NULL OR p.effectiveTo >= :now)
             """)
-    List<Long> findProductIdsWithActivePrice(
+    List<Long> findProductIdsWithPrice(
             @Param("organizationId") Long organizationId,
             @Param("now") LocalDateTime now);
 }

@@ -1,7 +1,6 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.ProductResponse;
-import com.example.demo.entity.PriceStatus;
 import com.example.demo.entity.ProductItem;
 import com.example.demo.entity.ProductPrice;
 import com.example.demo.entity.User;
@@ -11,6 +10,7 @@ import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,6 +19,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ProductService {
 
     private final ProductItemRepository productItemRepository;
@@ -49,7 +50,7 @@ public class ProductService {
 
         LocalDateTime now = LocalDateTime.now();
         Set<Long> pricedProductIds = Set.copyOf(
-                productPriceRepository.findProductIdsWithActivePrice(organizationId, now));
+                productPriceRepository.findProductIdsWithPrice(organizationId, now));
 
         boolean filterByCategory = category != null && !category.isBlank() && !category.equalsIgnoreCase("All");
 
@@ -65,7 +66,7 @@ public class ProductService {
 
         if (organizationId != null) {
             price = productPriceRepository
-                    .findCurrentPrices(item.getProductId(), organizationId, PriceStatus.ACTIVE, now)
+                    .findCurrentPrices(item.getProductId(), organizationId, now)
                     .stream()
                     .map(ProductPrice::getPrice)
                     .findFirst()
