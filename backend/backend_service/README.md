@@ -74,3 +74,8 @@ src/main/java/com/example/demo/
 docker build -t demo-service .
 docker run -p 8080:8080 -e JWT_SECRET=your-real-secret demo-service
 ```
+Features enabled successfully — restart is required. Please restart your PC now, then:
+1. Start Docker Desktop (wait until it shows "Engine running")
+2. In D:\Dude\PJOK, run docker compose up -d
+3. Adminer → http://localhost:6768, MySQL → localhost:6787
+Ping me after the reboot and I'll verify everything and start the containers for you.

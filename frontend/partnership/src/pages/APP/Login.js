@@ -33,7 +33,7 @@ function Login() {
 
       const data = await response.json();
       login(data.accessToken, data.refreshToken);
-      navigate('/');
+      navigate('/home');
     } catch (err) {
       setError('Something went wrong. Please try again.');
     }

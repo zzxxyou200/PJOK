@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
 @Table(name = "product_items")
@@ -34,8 +35,13 @@ public class ProductItem {
     @Column(name = "item_status")
     private String itemStatus;
 
-    @Column(name = "category")
-    private String category;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "product_item_categories",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<Category> categories;
 
     @Column(name = "warranty_start_date")
     private LocalDate warrantyStartDate;
