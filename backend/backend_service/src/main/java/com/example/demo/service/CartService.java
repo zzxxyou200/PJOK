@@ -64,10 +64,11 @@ public class CartService {
     public CartResponse addItem(String username, CartItemRequest request) {
         User user = resolveUser(username);
 
-        BigDecimal price = productPriceRepository
+        ProductItem item = productItemRepository.findById(request.getProductId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        ProductPrice productPrice = productPriceRepository
                 .findCurrentPrices(request.getProductId(), user.getOrganizationId(), LocalDateTime.now())
                 .stream()
-                .map(ProductPrice::getPrice)
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "No price available for this product"));
@@ -76,10 +77,31 @@ public class CartService {
         String productId = String.valueOf(request.getProductId());
         String unitType = normalizeUnitType(request.getUnitType());
         int amount = request.getAmount() == null || request.getAmount() < 1 ? 1 : request.getAmount();
+        BigDecimal price = "BOX".equals(unitType) ? productPrice.getBoxPrice() : productPrice.getPrice();
+        if (price == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "No price available for the selected unit type");
+        }
 
-        Cart cart = cartRepository
-                .findByUserIdAndProductIdAndUnitTypeAndStatus(userId, productId, unitType, STATUS_ACTIVE)
-                .orElse(null);
+        List<Cart> activeCarts = cartRepository
+                .findByUserIdAndStatusOrderByCreateDtAsc(userId, STATUS_ACTIVE);
+        List<Cart> matchingCarts = activeCarts.stream()
+                .filter(existing -> productId.equals(existing.getProductId()))
+                .filter(existing -> unitType.equals(normalizeUnitType(existing.getUnitType())))
+                .toList();
+        Cart cart = matchingCarts.isEmpty() ? null : matchingCarts.get(0);
+
+        long cartedQuantity = activeCarts.stream()
+                .filter(existing -> productId.equals(existing.getProductId()))
+                .mapToLong(existing -> ProductQuantity.toStockUnits(
+                        existing.getAmount() == null ? 0 : existing.getAmount(),
+                        existing.getUnitType()))
+                .sum();
+        int availableStock = item.getStockQuantity() == null ? 1 : item.getStockQuantity();
+        long requestedStockUnits = ProductQuantity.toStockUnits(amount, unitType);
+        if (requestedStockUnits > availableStock - cartedQuantity) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Requested quantity exceeds available stock");
+        }
 
         if (cart == null) {
             cart = Cart.builder()
@@ -96,14 +118,21 @@ public class CartService {
                     .unitType(unitType)
                     .build();
         } else {
-            cart.setAmount(cart.getAmount() + amount);
+            int existingQuantity = matchingCarts.stream()
+                    .mapToInt(existing -> existing.getAmount() == null ? 0 : existing.getAmount())
+                    .sum();
+            cart.setAmount(existingQuantity + amount);
             cart.setPrice(price.doubleValue());
+            cart.setUnitType(unitType);
             cart.setUpdateDt(LocalDate.now());
             cart.setUpdateBy(username);
+            if (matchingCarts.size() > 1) {
+                cartRepository.deleteAll(matchingCarts.subList(1, matchingCarts.size()));
+            }
         }
 
         cart = cartRepository.saveAndFlush(cart);
-        return toResponse(cart, productItemRepository.findById(request.getProductId()).orElse(null));
+        return toResponse(cart, item);
     }
 
     public CartResponse updateAmount(String username, String cartId, CartAmountRequest request) {
@@ -116,12 +145,29 @@ public class CartService {
             return null;
         }
 
+        ProductItem item = productItemRepository.findById(Long.valueOf(cart.getProductId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        String cartProductId = cart.getProductId();
+        long otherCartQuantity = cartRepository
+                .findByUserIdAndStatusOrderByCreateDtAsc(String.valueOf(user.getId()), STATUS_ACTIVE)
+                .stream()
+                .filter(existing -> !cartId.equals(existing.getId()))
+                .filter(existing -> cartProductId.equals(existing.getProductId()))
+                .mapToLong(existing -> ProductQuantity.toStockUnits(
+                        existing.getAmount() == null ? 0 : existing.getAmount(),
+                        existing.getUnitType()))
+                .sum();
+        int availableStock = item.getStockQuantity() == null ? 1 : item.getStockQuantity();
+        long requestedStockUnits = ProductQuantity.toStockUnits(request.getAmount(), cart.getUnitType());
+        if (requestedStockUnits > availableStock - otherCartQuantity) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Requested quantity exceeds available stock");
+        }
+
         cart.setAmount(request.getAmount());
         cart.setUpdateDt(LocalDate.now());
         cart.setUpdateBy(username);
         cart = cartRepository.saveAndFlush(cart);
-        return toResponse(cart, productItemRepository
-                .findById(Long.valueOf(cart.getProductId())).orElse(null));
+        return toResponse(cart, item);
     }
 
     public void removeItem(String username, String cartId) {
@@ -174,6 +220,9 @@ public class CartService {
                 .price(cart.getPrice() == null ? null : BigDecimal.valueOf(cart.getPrice()))
                 .amount(cart.getAmount())
                 .unitType(cart.getUnitType())
+                .stockQuantity(item == null || item.getStockQuantity() == null
+                        ? (item != null && "AVAILABLE".equalsIgnoreCase(item.getItemStatus()) ? 1 : 0)
+                        : item.getStockQuantity())
                 .status(cart.getStatus())
                 .build();
     }

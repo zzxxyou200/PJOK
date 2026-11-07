@@ -1,14 +1,13 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
   application:
     name: demo-service
 
-  # --- MySQL DB (Docker: docker compose up -d) ---
+  # --- Local MySQL by default; set DB_URL to jdbc:postgresql://... for Neon ---
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:6787/Cust_detail}
-    driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME:admin}
     password: ${DB_PASSWORD:123}
 
@@ -19,14 +18,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect
 
-  # --- Uncomment and adjust to use PostgreSQL instead ---
-  # datasource:
-  #   url: jdbc:postgresql://localhost:5432/demodb
-  #   username: postgres
-  #   password: postgres
-  #   driver-class-name: org.postgresql.Driver
+  thymeleaf:
+    cache: false
+    encoding: UTF-8
 
   # --- Uncomment and adjust to use Oracle instead (also uncomment ojdbc11 dependency in pom.xml) ---
   # datasource:
@@ -36,11 +31,31 @@ spring:
   #   driver-class-name: oracle.jdbc.OracleDriver
 
 app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
   jwt:
     # Strong random secret for signing access/refresh tokens (>= 256 bits)
     secret: ${JWT_SECRET:ZmVkMWZjZmItOWQ2MS00N2E4LTg5YmUtZjE0YTEyM2Q0NWNiLWp3dHNlY3JldC1rZXktMjAyNg==}
     access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}    # 15 minutes
     refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000} # 7 days
+
+  # Values printed on the ใบขอเบิกพัสดุราชการ report
+  report:
+    company-name: ${REPORT_COMPANY_NAME:หจก.พี.เจ.โอเอ. เซ็นเตอร์}
+    company-name-en: ${REPORT_COMPANY_NAME_EN:P.J. O.A. CENTER LIMITED PARTNERSHIP}
+    # Printed on the form when the requesting user has no department stored
+    department-name: ${REPORT_DEPARTMENT_NAME:ชื่อหน่วยงานราชการ}
+    address: ${REPORT_ADDRESS:ที่อยู่}
+    division: ${REPORT_DIVISION:กอง}
+    tax-id: ${REPORT_TAX_ID:0000000000000}
+    phone: ${REPORT_PHONE:000-000-0000}
+    # Prefix for the generated document number, e.g. PI6908001
+    document-no-prefix: ${REPORT_DOCUMENT_NO_PREFIX:PI}
+    # Base URL encoded into the QR code for tracking
+    tracking-base-url: ${REPORT_TRACKING_BASE_URL:http://localhost:3000/purchase-history}
+    # Font family name that must be registered with OpenHTMLtoPDF
+    pdf-font-family: ${REPORT_PDF_FONT_FAMILY:Sarabun}
 
 management:
   endpoints:

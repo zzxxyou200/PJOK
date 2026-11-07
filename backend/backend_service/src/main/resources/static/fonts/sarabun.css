@@ -1,0 +1,20 @@
+/*
+ * Sarabun (Google Fonts, SIL Open Font License 1.1 - see OFL.txt in this folder).
+ * Kept out of the Thymeleaf template on purpose: OpenHTMLtoPDF honours @font-face by
+ * trying to fetch the URL, which fails server-side and shadows the font registered via
+ * PdfRendererBuilder.useFont(...). Browsers pick this up through the <link> in the
+ * template, so the on-screen preview and the PDF use identical typefaces.
+ */
+@font-face {
+    font-family: 'Sarabun';
+    font-style: normal;
+    font-weight: 400;
+    src: url('Sarabun-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Sarabun';
+    font-style: normal;
+    font-weight: 700;
+    src: url('Sarabun-Bold.ttf') format('truetype');
+}

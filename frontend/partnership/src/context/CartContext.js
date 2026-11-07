@@ -106,6 +106,18 @@ export function CartProvider({ children }) {
     setItems([]);
   };
 
+  const checkout = async (cartIds) => {
+    if (!cartIds || cartIds.length === 0) return [];
+    const data = await handleResponse(await fetch(`${API_URL}/purchase-history`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ cartItemIds: cartIds }),
+    }));
+    const boughtIds = new Set(cartIds);
+    setItems((prev) => prev.filter((i) => !boughtIds.has(i.id)));
+    return data || [];
+  };
+
   const value = useMemo(() => {
     const totalCount = items.reduce((sum, i) => sum + (i.amount || 0), 0);
     const totalPrice = items.reduce((sum, i) => sum + (i.amount || 0) * (Number(i.price) || 0), 0);
@@ -118,6 +130,7 @@ export function CartProvider({ children }) {
       updateQty,
       removeFromCart,
       clearCart,
+      checkout,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, loading]);

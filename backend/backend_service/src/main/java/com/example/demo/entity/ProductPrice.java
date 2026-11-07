@@ -29,6 +29,9 @@ public class ProductPrice {
 
     private BigDecimal price;
 
+    @Column(name = "box_price", precision = 38, scale = 2)
+    private BigDecimal boxPrice;
+
     @Column(name = "effective_from")
     private LocalDateTime effectiveFrom;
 

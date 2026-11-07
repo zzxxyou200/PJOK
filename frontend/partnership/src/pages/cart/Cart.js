@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Button, IconButton, Divider, Checkbox, FormControlLabel } from '@mui/material';
+import { Box, Typography, Paper, Button, IconButton, Divider, Checkbox, FormControlLabel, Snackbar, Alert } from '@mui/material';
 import { Remove, Add, Delete } from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 
 function Cart() {
-  const { items, totalCount, updateQty, removeFromCart, clearCart } = useCart();
+  const { items, totalCount, updateQty, removeFromCart, clearCart, checkout } = useCart();
   const [selected, setSelected] = useState(() => new Set(items.map((i) => i.id)));
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [toast, setToast] = useState({ open: false, count: 0 });
+  const navigate = useNavigate();
 
   useEffect(() => {
     setSelected((prev) => new Set([...prev].filter((id) => items.some((i) => i.id === id))));
@@ -33,6 +36,20 @@ function Cart() {
     (sum, i) => sum + (i.amount || 0) * (Number(i.price) || 0),
     0
   );
+
+  const handleCheckout = async () => {
+    if (selectedItems.length === 0) return;
+    setCheckingOut(true);
+    try {
+      const ids = selectedItems.map((i) => i.id);
+      await checkout(ids);
+      setSelected(new Set());
+      setToast({ open: true, count: ids.length });
+      setTimeout(() => navigate('/purchase-history'), 900);
+    } finally {
+      setCheckingOut(false);
+    }
+  };
 
   const formatPrice = (price) =>
     price == null ? 'N/A' : new Intl.NumberFormat('en-US', {
@@ -130,13 +147,28 @@ function Cart() {
               <Button variant="outlined" color="inherit" onClick={clearCart}>
                 ล้างตะกร้า
               </Button>
-              <Button variant="contained" disabled={selectedItems.length === 0}>
-                Checkout
+              <Button
+                variant="contained"
+                disabled={selectedItems.length === 0 || checkingOut}
+                onClick={handleCheckout}
+              >
+                {checkingOut ? 'Processing...' : 'Checkout'}
               </Button>
             </Box>
           </Box>
         </Paper>
       )}
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={1800}
+        onClose={() => setToast({ open: false, count: 0 })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" variant="filled" onClose={() => setToast({ open: false, count: 0 })}>
+          Bought {toast.count} item{toast.count > 1 ? 's' : ''}. Moved to purchase history.
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

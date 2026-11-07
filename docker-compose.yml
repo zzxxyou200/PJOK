@@ -27,5 +27,19 @@ services:
     ports:
       - "6768:8080"
 
+  demo-service:
+    build: ./backend/backend_service
+    container_name: someshop-demo-service
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: "${JWT_SECRET:-ZmVkMWZjZmItOWQ2MS00N2E4LTg5YmUtZjE0YTEyM2Q0NWNiLWp3dHNlY3JldC1rZXktMjAyNg==}"
+      DB_URL: "${DB_URL:-jdbc:mysql://mysql:3306/Cust_detail}"
+      DB_USERNAME: "${DB_USERNAME:-admin}"
+      DB_PASSWORD: "${DB_PASSWORD:-123}"
+
 volumes:
   mysql_data:

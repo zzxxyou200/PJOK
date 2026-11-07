@@ -35,6 +35,13 @@ public class ProductItem {
     @Column(name = "item_status")
     private String itemStatus;
 
+    @Column(name = "stock_quantity", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 1")
+    @Builder.Default
+    private Integer stockQuantity = 1;
+
+    @Column(name = "unit_type", length = 50)
+    private String unitType;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "product_item_categories",

@@ -16,13 +16,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +59,26 @@ public class ProductService {
         return toResponse(item, organizationId, LocalDateTime.now(), loadTotalSold());
     }
 
+    public List<ProductResponse> searchProducts(String username, String search, int limit) {
+        Long organizationId = userRepository.findByUsername(username)
+                .map(User::getOrganizationId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+        LocalDateTime now = LocalDateTime.now();
+        Map<Long, Long> totalSold = loadTotalSold();
+
+        Stream<ProductItem> stream = productItemRepository.findAll().stream()
+                .filter(item -> matchesSearch(item, search));
+
+        if (limit > 0) {
+            return stream.limit(limit)
+                    .map(item -> toResponse(item, organizationId, now, totalSold))
+                    .toList();
+        }
+        return stream.map(item -> toResponse(item, organizationId, now, totalSold))
+                .toList();
+    }
+
     public List<ProductResponse> getPricedProductsForUser(String username, String category) {
         Long organizationId = userRepository.findByUsername(username)
                 .map(User::getOrganizationId)
@@ -89,6 +109,24 @@ public class ProductService {
                 ));
     }
 
+    private boolean matchesSearch(ProductItem item, String search) {
+        if (search == null || search.trim().isEmpty()) {
+            return true;
+        }
+        String q = search.trim().toLowerCase();
+        return containsIgnoreCase(item.getProductName(), q)
+                || containsIgnoreCase(item.getSerialNumber(), q)
+                || containsIgnoreCase(item.getConditionStatus(), q)
+                || containsIgnoreCase(item.getItemStatus(), q)
+                || containsIgnoreCase(item.getNote(), q)
+                || (item.getCategories() != null && item.getCategories().stream()
+                        .anyMatch(c -> containsIgnoreCase(c.getName(), q)));
+    }
+
+    private boolean containsIgnoreCase(String value, String keyword) {
+        return value != null && value.toLowerCase().contains(keyword);
+    }
+
     private boolean hasMatchingCategory(ProductItem item, String category) {
         return item.getCategories() != null && item.getCategories().stream()
                 .anyMatch(c -> category.equalsIgnoreCase(c.getName()));
@@ -116,14 +154,12 @@ public class ProductService {
 
     private ProductResponse toResponse(ProductItem item, Long organizationId, LocalDateTime now,
                                        Map<Long, Long> totalSold) {
-        BigDecimal price = null;
+        ProductPrice productPrice = null;
 
         if (organizationId != null) {
-            price = productPriceRepository
+            productPrice = productPriceRepository
                     .findCurrentPrices(item.getProductId(), organizationId, now)
-                    .stream()
-                    .map(ProductPrice::getPrice)
-                    .findFirst()
+                    .stream().findFirst()
                     .orElse(null);
         }
 
@@ -139,9 +175,13 @@ public class ProductService {
                 .warrantyEndDate(item.getWarrantyEndDate())
                 .note(item.getNote())
                 .images(item.getImages())
-                .price(price)
+                .price(productPrice == null ? null : productPrice.getPrice())
+                .boxPrice(productPrice == null ? null : productPrice.getBoxPrice())
                 .totalSold(totalSold.getOrDefault(item.getProductId(), 0L))
                 .organizationId(organizationId)
+                .stockQuantity(item.getStockQuantity() == null
+                        ? ("AVAILABLE".equalsIgnoreCase(item.getItemStatus()) ? 1 : 0)
+                        : item.getStockQuantity())
                 .build();
     }
 }

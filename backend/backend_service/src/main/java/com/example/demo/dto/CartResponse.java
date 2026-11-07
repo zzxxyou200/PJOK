@@ -16,5 +16,6 @@ public class CartResponse {
     private BigDecimal price;
     private Integer amount;
     private String unitType;
+    private Integer stockQuantity;
     private String status;
 }

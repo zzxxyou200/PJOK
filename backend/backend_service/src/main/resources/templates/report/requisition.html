@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="th"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8" />
+
+    <link rel="stylesheet" href="/fonts/sarabun.css" />
+
+    <title>ใบขอเบิกพัสดุราชการ</title>
+
+    <!--
+        Layout note: every container is a table rather than flexbox or grid, and every
+        table sets table-layout:fixed. The browser renders these tables, and so does the
+        server-side PDF engine, so the printable output and the on-screen preview match.
+        Font faces are declared in /fonts/sarabun.css rather than here: OpenHTMLtoPDF
+        reacts to at-rule font faces by fetching the URL, which fails server-side and
+        overrides the face registered through PdfRendererBuilder.useFont.
+        This file must stay well-formed XML, so no comment may contain angle brackets.
+    -->
+
+    <style>
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: white;
+            font-family: 'Sarabun', 'Noto Sans Thai', 'Tahoma', Arial, sans-serif;
+            font-size: 12px;
+        }
+
+        body {
+            width: 210mm;
+            margin: auto;
+        }
+
+        .document {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 8mm 11mm;
+            background: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        /* ================= HEADER ================= */
+
+        .top-header {
+            border-collapse: collapse;
+        }
+
+        .header-company {
+            width: 58%;
+            vertical-align: top;
+            padding: 0 0 4mm 0;
+            border-bottom: 1px solid #dddddd;
+        }
+
+        .header-info {
+            width: 42%;
+            vertical-align: top;
+            padding: 0 0 4mm 0;
+            border-bottom: 1px solid #dddddd;
+            text-align: right;
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        .logo-cell {
+            width: 16mm;
+            vertical-align: middle;
+        }
+
+        .company-logo {
+            width: 16mm;
+            height: 16mm;
+        }
+
+        .name-cell {
+            vertical-align: middle;
+            padding-left: 4mm;
+        }
+
+        .company-name {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .company-name-en {
+            margin-top: 1mm;
+            font-size: 9px;
+            letter-spacing: 0.2px;
+        }
+
+        /* ================= TITLE ================= */
+
+        .title {
+            text-align: center;
+
+            margin-top: 5mm;
+            margin-bottom: 5mm;
+
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* ================= INFO ================= */
+
+        .info-box {
+            border: 1px solid #dddddd;
+            border-collapse: separate;
+            border-spacing: 3.5mm;
+            table-layout: fixed;
+        }
+
+        .info-cell {
+            width: 69.5mm;
+            vertical-align: top;
+            padding: 1.5mm 0;
+        }
+
+        .qr-cell {
+            width: 35mm;
+            vertical-align: middle;
+            padding: 1.5mm 0;
+            text-align: center;
+        }
+
+        /* OpenHTMLtoPDF ignores padding declared on a row, so it lives on the cells. */
+        .info-row td {
+            padding-bottom: 2mm;
+        }
+
+        .label {
+            width: 28mm;
+            vertical-align: top;
+            font-weight: 700;
+        }
+
+        .value {
+            word-wrap: break-word;
+        }
+
+        .value-nowrap {
+            white-space: nowrap;
+        }
+
+        /* ================= QR ================= */
+
+        .qr-image {
+            width: 27mm;
+            height: 27mm;
+        }
+
+        .qr-placeholder {
+            width: 27mm;
+            height: 27mm;
+            line-height: 27mm;
+            background: #eeeeee;
+            font-size: 8px;
+            color: #777777;
+        }
+
+        .qr-caption {
+            margin-top: 1.5mm;
+            font-size: 8px;
+            color: #777777;
+        }
+
+        /* ================= TABLE ================= */
+
+        .items-table {
+            margin-top: 5mm;
+            border: 1px solid #dddddd;
+            table-layout: fixed;
+        }
+
+        thead th {
+            background: #e9e9e9;
+            text-align: center;
+            font-weight: 700;
+            padding: 2.5mm 2mm;
+            border-right: 1px solid #dddddd;
+            border-bottom: 1px solid #999999;
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 2.5mm 2mm;
+            border-top: 1px solid #dddddd;
+            border-right: 1px solid #dddddd;
+            vertical-align: top;
+        }
+
+        th:last-child,
+        td:last-child {
+            border-right: none;
+        }
+
+        .col-no {
+            width: 6%;
+        }
+
+        .col-order {
+            width: 14%;
+        }
+
+        .col-product {
+            width: 34%;
+        }
+
+        .col-quantity {
+            width: 14%;
+        }
+
+        .col-price {
+            width: 13%;
+        }
+
+        .col-total {
+            width: 19%;
+        }
+
+        /* Alignment is applied to body cells only so headers stay centred. */
+        tbody td.col-no,
+        tbody td.col-quantity {
+            text-align: center;
+        }
+
+        tbody td.col-price,
+        tbody td.col-total {
+            text-align: right;
+        }
+
+        tbody td.col-price,
+        tbody td.col-total,
+        tbody td.col-quantity {
+            white-space: nowrap;
+        }
+
+        .serial-number {
+            margin-top: 1mm;
+            font-size: 10px;
+            color: #666666;
+        }
+
+        .total-row td {
+            padding: 3mm 8mm;
+            border-top: 2px solid #333333;
+            border-right: none;
+        }
+
+        .total-label {
+            width: 70%;
+            text-align: right;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .total-value {
+            width: 30%;
+            text-align: right;
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .total-summary {
+            margin-top: 1.5mm;
+            font-size: 10px;
+            font-weight: 400;
+            color: #666666;
+            text-align: right;
+        }
+
+        /* ================= SIGNATURE ================= */
+
+        .signature-wrapper {
+            margin-top: 8mm;
+            page-break-inside: avoid;
+        }
+
+        .signature-section {
+            border-collapse: separate;
+            border-spacing: 3.5mm 0;
+        }
+
+        .signature-box {
+            width: 33.33%;
+            height: 28mm;
+            border: 1px solid #dddddd;
+            padding: 3mm;
+            text-align: center;
+            vertical-align: top;
+            font-size: 11px;
+        }
+
+        .signature-title {
+            font-weight: 700;
+        }
+
+        .signature-line {
+            margin-top: 7mm;
+            border-bottom: 1px dotted #555555;
+            height: 5mm;
+        }
+
+        .signature-name {
+            margin-top: 2mm;
+        }
+
+        .signature-date {
+            margin-top: 2mm;
+        }
+
+        .footer-note {
+            margin-top: 5mm;
+            text-align: center;
+            font-size: 9px;
+            color: #999999;
+        }
+
+        /* ================= PRINT ================= */
+
+        @media print {
+
+            html,
+            body {
+                width: 210mm;
+                height: 297mm;
+            }
+
+            .document {
+                page-break-after: always;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="document">
+
+    <!-- ================= HEADER ================= -->
+
+    <table class="top-header">
+
+        <tr>
+
+            <td class="header-company">
+
+                <table>
+                    <tr>
+
+                        <td class="logo-cell">
+                            <img th:if="${report.logoDataUri != null}"
+                                 class="company-logo"
+                                 th:src="${report.logoDataUri}"
+                                 alt="Logo" />
+                        </td>
+
+                        <td class="name-cell">
+
+                            <div class="company-name"
+                                 th:text="${report.companyName}">
+                                หจก.พี.เจ.โอเอ. เซ็นเตอร์
+                            </div>
+
+                            <div class="company-name-en"
+                                 th:text="${report.companyNameEn}">
+                                P.J. O.A. CENTER LIMITED PARTNERSHIP
+                            </div>
+
+                        </td>
+
+                    </tr>
+                </table>
+
+            </td>
+
+            <td class="header-info">
+
+                <div>
+                    เลขที่เอกสาร:
+                    <b th:text="${report.documentNo}">PI6908001</b>
+                </div>
+
+                <div>
+                    วันที่:
+                    <b th:text="${report.documentDate}">00/00/2569 00:00 น.</b>
+                </div>
+
+                <div>
+                    ช่วงวันที่:
+                    <b>
+                        <span th:text="${report.periodStart}">-</span>
+                        -
+                        <span th:text="${report.periodEnd}">-</span>
+                    </b>
+                </div>
+
+            </td>
+
+        </tr>
+
+    </table>
+
+
+    <!-- ================= TITLE ================= -->
+
+    <div class="title">
+        ใบขอเบิกพัสดุราชการ
+    </div>
+
+
+    <!-- ================= INFORMATION ================= -->
+
+    <table class="info-box">
+
+        <tr>
+
+            <td class="info-cell">
+
+                <table>
+                    <tr>
+                        <td class="label">หน่วยงาน:</td>
+                        <td class="value" th:text="${report.departmentName}">ชื่อหน่วยงานราชการ</td>
+                    </tr>
+                    <tr class="info-row">
+                        <td class="label">ที่อยู่:</td>
+                        <td class="value" th:text="${report.address}">ที่อยู่</td>
+                    </tr>
+                    <tr class="info-row">
+                        <td class="label">ผู้ขอเบิก:</td>
+                        <td class="value" th:text="${report.requesterName}">ชื่อผู้ขอเบิก</td>
+                    </tr>
+                    <tr class="info-row">
+                        <td class="label">เลขที่หนังสืออ้างอิง:</td>
+                        <td class="value" th:text="${report.referenceNo}">-</td>
+                    </tr>
+                </table>
+
+            </td>
+
+
+            <td class="info-cell">
+
+                <table>
+                    <tr>
+                        <td class="label">เลขประจำตัวผู้เสียภาษี:</td>
+                        <td class="value value-nowrap" th:text="${report.taxId}">0000000000000</td>
+                    </tr>
+                    <tr class="info-row">
+                        <td class="label">กอง / ฝ่าย / กลุ่มงาน:</td>
+                        <td class="value" th:text="${report.division}">กอง</td>
+                    </tr>
+                    <tr class="info-row">
+                        <td class="label">เบอร์โทรศัพท์ติดต่อ:</td>
+                        <td class="value value-nowrap" th:text="${report.phone}">000-000-0000</td>
+                    </tr>
+                </table>
+
+            </td>
+
+
+            <!-- QR -->
+
+            <td class="qr-cell">
+
+                <img th:if="${report.qrCodeDataUri != null}"
+                     class="qr-image"
+                     th:src="${report.qrCodeDataUri}"
+                     alt="QR Code" />
+
+                <div th:if="${report.qrCodeDataUri == null}" class="qr-placeholder">
+                    QR Code
+                </div>
+
+                <div class="qr-caption">สแกนเพื่อตรวจสอบสถานะ</div>
+
+            </td>
+
+        </tr>
+
+    </table>
+
+
+    <!-- ================= TABLE ================= -->
+
+    <table class="items-table">
+
+        <thead>
+
+        <tr>
+
+            <th class="col-no">ลำดับที่</th>
+
+            <th class="col-order">เลขที่ใบสั่งซื้อ</th>
+
+            <th class="col-product">รายการสินค้า</th>
+
+            <th class="col-quantity">จำนวน/หน่วย</th>
+
+            <th class="col-price">ราคา</th>
+
+            <th class="col-total">รวมเป็นเงิน (บาท)</th>
+
+        </tr>
+
+        </thead>
+
+        <tbody>
+
+        <tr th:each="item : ${report.items}">
+
+            <td class="col-no"
+                th:text="${item.no}">1</td>
+
+            <td class="col-order"
+                th:text="${item.orderNo}">PI-0001</td>
+
+            <td class="col-product">
+                <span th:text="${item.productName}">ชื่อรายการสินค้า</span>
+
+                <div class="serial-number">
+                    S/N: <span th:text="${item.serialNumber}">-</span>
+                </div>
+            </td>
+
+            <td class="col-quantity">
+
+                <span th:text="${item.quantity}">0</span>
+
+                /
+
+                <span th:text="${item.unit}">หน่วยนับ</span>
+
+            </td>
+
+            <td class="col-price">
+
+                ฿
+
+                <span th:text="${item.price}">0.00</span>
+
+            </td>
+
+            <td class="col-total">
+
+                ฿
+
+                <span th:text="${item.total}">0.00</span>
+
+            </td>
+
+        </tr>
+
+
+        <!-- GRAND TOTAL -->
+
+        <tr class="total-row">
+
+            <td colspan="6">
+
+                <table>
+                    <tr>
+                        <td class="total-label">รวมทั้งสิ้น (บาท):</td>
+                        <td class="total-value">
+                            ฿<span th:text="${report.grandTotal}">0.00</span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="total-summary">
+                    รวม <span th:text="${report.orderCount}">0</span>
+                    คำสั่งซื้อ /
+                    <span th:text="${report.itemCount}">0</span>
+                    รายการพัสดุ /
+                    <span th:text="${report.totalQuantity}">0</span>
+                    หน่วย
+                </div>
+
+            </td>
+
+        </tr>
+
+        </tbody>
+
+    </table>
+
+
+    <!-- ================= SIGNATURE ================= -->
+
+    <div class="signature-wrapper">
+
+        <table class="signature-section">
+
+            <tr>
+
+                <td class="signature-box">
+
+                    <div class="signature-title">ผู้รับคำสั่งซื้อ</div>
+
+                    <div class="signature-line"></div>
+
+                    <div class="signature-name">(________________________)</div>
+
+                    <div>ผู้รับคำสั่งซื้อ</div>
+
+                    <div class="signature-date">วันที่ ____/____/____</div>
+
+                </td>
+
+
+                <td class="signature-box">
+
+                    <div class="signature-title">ฝ่ายผู้ขอเบิก</div>
+
+                    <div class="signature-line"></div>
+
+                    <div class="signature-name">(________________________)</div>
+
+                    <div>ผู้ขอเบิก</div>
+
+                    <div class="signature-date">วันที่ ____/____/____</div>
+
+                </td>
+
+
+                <td class="signature-box">
+
+                    <div class="signature-title">ฝ่ายจัดส่ง/ส่งมอบ</div>
+
+                    <div class="signature-line"></div>
+
+                    <div class="signature-name">(________________________)</div>
+
+                    <div>ผู้จัดส่ง / ส่งมอบพัสดุ</div>
+
+                    <div class="signature-date">วันที่ ____/____/____</div>
+
+                </td>
+
+            </tr>
+
+        </table>
+
+    </div>
+
+
+    <div class="footer-note">
+        เอกสารนี้ออกโดยระบบ PJOK ใบขอเบิกพัสดุราชการ
+    </div>
+
+</div>
+
+</body>
+
+</html>

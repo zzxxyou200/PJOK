@@ -9,6 +9,7 @@ import {
 import { Storefront, ShoppingCart } from '@mui/icons-material';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+const UNITS_PER_BOX = 12;
 
 const CATEGORIES = ['All', 'Accessories', 'Consumables', 'Electronics', 'Spare Parts'];
 
@@ -24,7 +25,7 @@ const SORT_OPTIONS = [
 
 function Home() {
   const { isAuthenticated, logout } = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, items: cartItems } = useCart();
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('none');
@@ -34,6 +35,22 @@ function Home() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const searchTerm = (searchParams.get('q') || '').trim();
+
+  const handleAddToCart = async (event, product) => {
+    event.stopPropagation();
+    try {
+      await addToCart(product);
+      setToast({ open: true, name: product.productName, severity: 'success' });
+    } catch (addError) {
+      setToast({
+        open: true,
+        name: addError.message === 'Requested quantity exceeds available stock'
+          ? 'จำนวนสินค้าคงเหลือไม่เพียงพอ กรุณาตรวจสอบสต็อกและรายการในตะกร้า'
+          : addError.message || 'ไม่สามารถเพิ่มสินค้าลงตะกร้าได้',
+        severity: 'error',
+      });
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -207,6 +224,11 @@ function Home() {
             <Box className="product-grid">
               {visibleProducts.map((p) => {
                 const image = p.images?.split(',')[0]?.trim();
+                const cartedQuantity = cartItems
+                  .filter((item) => Number(item.productId) === Number(p.productId))
+                  .reduce((sum, item) => sum + (Number(item.amount) || 0)
+                    * (item.unitType === 'BOX' ? UNITS_PER_BOX : 1), 0);
+                const canAddToCart = (Number(p.stockQuantity) || 0) > cartedQuantity;
                 return (
                   <Card
                     className="product-card"
@@ -259,13 +281,10 @@ function Home() {
       size="small"
       variant="outlined"
       startIcon={<ShoppingCart fontSize="small" />}
-      onClick={(e) => {
-        e.stopPropagation();
-        addToCart(p);
-        setToast({ open: true, name: p.productName });
-      }}
+      disabled={!canAddToCart || p.price == null}
+      onClick={(event) => handleAddToCart(event, p)}
     >
-      Add to Cart
+      {canAddToCart ? 'Add to Cart' : 'Out of stock'}
     </Button>
   </CardActions>
                   </Card>
@@ -281,8 +300,8 @@ function Home() {
         onClose={() => setToast({ open: false, name: '' })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="success" variant="filled" onClose={() => setToast({ open: false, name: '' })}>
-          Added "{toast.name}" to cart
+        <Alert severity={toast.severity || 'success'} variant="filled" onClose={() => setToast({ open: false, name: '' })}>
+          {toast.severity === 'error' ? toast.name : `Added "${toast.name}" to cart`}
         </Alert>
       </Snackbar>
     </div>

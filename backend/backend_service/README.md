@@ -7,7 +7,7 @@ Starter Spring Boot microservice: REST API + JWT-based login + JPA, ready to ext
 - Spring Boot 3.3 (Java 17)
 - Spring Web — REST controllers
 - Spring Security — auth, password hashing (BCrypt)
-- Spring Data JPA — H2 by default (Postgres/Oracle configs included, commented out)
+- Spring Data JPA — local MySQL by default; PostgreSQL is supported for Neon
 - jjwt — JWT generation/validation
 - springdoc-openapi — Swagger UI at `/swagger-ui.html`
 - Spring Boot Actuator — `/actuator/health`
@@ -19,8 +19,9 @@ Starter Spring Boot microservice: REST API + JWT-based login + JPA, ready to ext
 mvn spring-boot:run
 ```
 
-App starts on `http://localhost:8080`. H2 console: `http://localhost:8080/h2-console`
-(JDBC URL `jdbc:h2:mem:demodb`, user `sa`, empty password).
+Start local MySQL from the repository root with `docker compose up -d mysql`,
+then run the backend from this directory. The app starts on
+`http://localhost:8080`.
 
 ## Try it
 
@@ -40,11 +41,52 @@ curl http://localhost:8080/api/users/me \
   -H "Authorization: Bearer <accessToken>"
 ```
 
-## Switching database
+## Neon PostgreSQL demo database
 
-Edit `src/main/resources/application.yml`:
-- Postgres block is included, commented out (uncomment + set credentials)
-- Oracle block is included, commented out — also uncomment the `ojdbc11` dependency in `pom.xml`
+The app supports local MySQL and PostgreSQL. To use Neon, create a Neon project,
+open its SQL Editor, and run `src/main/resources/db/neon-demo-seed.sql` to create
+the PostgreSQL tables and insert the demo data. The seed script is safe to rerun:
+it leaves rows that conflict with existing primary or unique keys unchanged.
+Use a dedicated demo database; the script includes demo accounts and sample
+purchase history.
+
+Configure these environment variables for the backend (for example, in Render):
+
+- `DB_URL`: `jdbc:postgresql://<neon-host>/<database>?sslmode=require`
+- `DB_USERNAME`: the Neon database role
+- `DB_PASSWORD`: the Neon database password
+- `JWT_SECRET`: a private random secret of at least 256 bits
+
+Keep the database credentials and `JWT_SECRET` on the backend; do not put them in
+the React frontend. The default local `DB_URL` continues to use MySQL from
+`docker-compose.yml`.
+
+## Deploy the Java backend to Railway
+
+1. Push this repository to GitHub and create a Railway project with **Deploy
+   from GitHub repo**.
+2. In the backend service's **Settings**, set **Root Directory** to
+   `/backend/backend_service`. Railway will build the existing `Dockerfile`
+   with Java 17 and Maven.
+3. Before deploying, run `src/main/resources/db/neon-demo-seed.sql` in the
+   Neon SQL Editor if the demo tables and data are not already present.
+4. In the Railway service's **Variables**, add:
+   - `DB_URL`: Neon JDBC URL, for example
+     `jdbc:postgresql://<neon-host>/neondb?sslmode=require&channel_binding=require`
+   - `DB_USERNAME`: Neon database role
+   - `DB_PASSWORD`: Neon database password (set it in Railway; never commit it)
+   - `JWT_SECRET`: a private random secret of at least 256 bits
+   - `CORS_ALLOWED_ORIGINS`: the deployed frontend origin, such as
+     `https://<your-site>.pages.dev` (no trailing slash). Multiple origins can
+     be comma-separated.
+5. Deploy the service, then use **Settings → Networking → Generate Domain** to
+   create its public URL. Verify `https://<railway-domain>/actuator/health`
+   returns `{"status":"UP"}`.
+6. Point the frontend's `REACT_APP_API_URL` to
+   `https://<railway-domain>/api` and rebuild/redeploy the frontend.
+
+Railway provides the `PORT` variable automatically; the application listens on
+it. Do not expose the Neon password or JWT secret in frontend variables.
 
 ## Before deploying anywhere real
 

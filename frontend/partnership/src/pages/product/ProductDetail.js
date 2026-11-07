@@ -9,11 +9,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+const UNITS_PER_BOX = 12;
 
 function ProductDetail() {
   const { productId } = useParams();
   const { isAuthenticated, logout } = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, items: cartItems } = useCart();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [image, setImage] = useState('');
@@ -22,7 +23,7 @@ function ProductDetail() {
   const [boxQty, setBoxQty] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [toast, setToast] = useState({ open: false, name: '' });
+  const [toast, setToast] = useState({ open: false, name: '', severity: 'success' });
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
@@ -102,6 +103,14 @@ function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (!product || (!unitQty && !boxQty)) return;
+    if (unitQty + boxQty * UNITS_PER_BOX > remainingStock) {
+      setToast({
+        open: true,
+        name: 'จำนวนสินค้าที่เลือกเกินสต็อกคงเหลือ',
+        severity: 'error',
+      });
+      return;
+    }
     setAdding(true);
     try {
       if (unitQty > 0) {
@@ -112,13 +121,26 @@ function ProductDetail() {
       }
       setUnitQty(0);
       setBoxQty(0);
-      setToast({ open: true, name: product.productName });
+      setToast({ open: true, name: product.productName, severity: 'success' });
+    } catch (addError) {
+      setToast({
+        open: true,
+        name: addError.message === 'Requested quantity exceeds available stock'
+          ? 'จำนวนสินค้าคงเหลือไม่เพียงพอ กรุณาตรวจสอบสต็อกและรายการในตะกร้า'
+          : addError.message || 'ไม่สามารถเพิ่มสินค้าลงตะกร้าได้',
+        severity: 'error',
+      });
     } finally {
       setAdding(false);
     }
   };
 
-  const anyQty = (unitQty > 0) || (boxQty > 0);
+  const cartedQuantity = cartItems
+    .filter((item) => Number(item.productId) === Number(product?.productId))
+    .reduce((sum, item) => sum + (Number(item.amount) || 0)
+      * (item.unitType === 'BOX' ? UNITS_PER_BOX : 1), 0);
+  const remainingStock = Math.max(0, (Number(product?.stockQuantity) || 0) - cartedQuantity);
+  const anyQty = (unitQty > 0) || (boxQty > 0 && product?.boxPrice != null);
 
   const formatPrice = (price) =>
     price == null ? 'N/A' : new Intl.NumberFormat('en-US', {
@@ -238,13 +260,20 @@ function ProductDetail() {
 
                 <Divider />
 
-                <Typography variant="h5" fontWeight={700} color="primary">
-                  {formatPrice(product.price)}
-                </Typography>
+                <Stack direction="row" spacing={2}>
+                  <Typography variant="h6" fontWeight={700} color="primary">
+                    Per Unit: {formatPrice(product.price)}
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700} color="primary">
+                    Per Box: {formatPrice(product.boxPrice)}
+                  </Typography>
+                </Stack>
 
                 <Stack direction="row" spacing={3} flexWrap="wrap" alignItems="center">
                   <Box>
-                    <Typography variant="body2" color="text.secondary" mb={0.5}>Per Unit</Typography>
+                    <Typography variant="body2" color="text.secondary" mb={0.5}>
+                      Per Unit · {formatPrice(product.price)}
+                    </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <IconButton size="small" onClick={() => setUnitQty(Math.max(0, unitQty - 1))}>
                         <Remove fontSize="small" />
@@ -252,13 +281,19 @@ function ProductDetail() {
                       <Typography variant="body1" sx={{ minWidth: 20, textAlign: 'center' }}>
                         {unitQty}
                       </Typography>
-                      <IconButton size="small" onClick={() => setUnitQty(unitQty + 1)}>
+                      <IconButton
+                        size="small"
+                        disabled={unitQty + boxQty * UNITS_PER_BOX >= remainingStock}
+                        onClick={() => setUnitQty(unitQty + 1)}
+                      >
                         <Add fontSize="small" />
                       </IconButton>
                     </Box>
                   </Box>
                   <Box>
-                    <Typography variant="body2" color="text.secondary" mb={0.5}>Per Box</Typography>
+                    <Typography variant="body2" color="text.secondary" mb={0.5}>
+                      Per Box · {formatPrice(product.boxPrice)} (12 units)
+                    </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <IconButton size="small" onClick={() => setBoxQty(Math.max(0, boxQty - 1))}>
                         <Remove fontSize="small" />
@@ -266,7 +301,12 @@ function ProductDetail() {
                       <Typography variant="body1" sx={{ minWidth: 20, textAlign: 'center' }}>
                         {boxQty}
                       </Typography>
-                      <IconButton size="small" onClick={() => setBoxQty(boxQty + 1)}>
+                      <IconButton
+                        size="small"
+                        disabled={product.boxPrice == null
+                          || unitQty + (boxQty + 1) * UNITS_PER_BOX > remainingStock}
+                        onClick={() => setBoxQty(boxQty + 1)}
+                      >
                         <Add fontSize="small" />
                       </IconButton>
                     </Box>
@@ -275,10 +315,10 @@ function ProductDetail() {
                     variant="contained"
                     startIcon={<ShoppingCart />}
                     onClick={handleAddToCart}
-                    disabled={adding || product.price == null || !anyQty}
+                    disabled={adding || product.price == null || !anyQty || remainingStock === 0}
                     sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
                   >
-                    {adding ? 'Adding...' : 'Add to Cart'}
+                    {adding ? 'Adding...' : remainingStock === 0 ? 'Out of stock' : 'Add to Cart'}
                   </Button>
                   <Button
                     variant="outlined"
@@ -363,11 +403,11 @@ function ProductDetail() {
       <Snackbar
         open={toast.open}
         autoHideDuration={2200}
-        onClose={() => setToast({ open: false, name: '' })}
+        onClose={() => setToast((current) => ({ ...current, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="success" variant="filled" onClose={() => setToast({ open: false, name: '' })}>
-          Added "{toast.name}" to cart
+        <Alert severity={toast.severity} variant="filled" onClose={() => setToast((current) => ({ ...current, open: false }))}>
+          {toast.severity === 'error' ? toast.name : `Added "${toast.name}" to cart`}
         </Alert>
       </Snackbar>
     </Box>

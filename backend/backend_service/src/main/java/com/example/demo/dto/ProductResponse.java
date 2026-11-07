@@ -22,6 +22,8 @@ public class ProductResponse {
     private String note;
     private String images;
     private BigDecimal price;
+    private BigDecimal boxPrice;
     private Long totalSold;
     private Long organizationId;
+    private Integer stockQuantity;
 }

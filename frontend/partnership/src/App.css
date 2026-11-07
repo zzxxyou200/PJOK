@@ -11,12 +11,12 @@
 
 /* ---------- AppBar / Navbar ---------- */
 .appbar {
-  background: linear-gradient(135deg, #312e81 0%, #4f46e5 55%, #7c3aed 100%) !important;
-  box-shadow: 0 2px 16px rgba(79, 70, 229, 0.35) !important;
+  background: #ffffff !important;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12) !important;
 }
 
 .appbar-brand {
-  color: #ffffff !important;
+  color: #2b2929 !important;
   font-weight: 700 !important;
   font-size: 1.15rem !important;
   letter-spacing: 0.02em;
@@ -50,7 +50,7 @@
 }
 
 .appbar-link {
-  color: rgba(255, 255, 255, 0.92) !important;
+  color: #2b2929 !important;
   text-transform: none !important;
   font-weight: 500 !important;
   border-radius: 10px !important;
@@ -59,16 +59,16 @@
 }
 
 .appbar-link:hover {
-  background-color: rgba(255, 255, 255, 0.14) !important;
+  background-color: rgba(43, 41, 41, 0.08) !important;
 }
 
 .appbar-logout {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5) !important;
+  box-shadow: inset 0 0 0 1px rgba(43, 41, 41, 0.35) !important;
 }
 
 .appbar-register {
   background-color: #ffffff !important;
-  color: #4f46e5 !important;
+  color: #2b2929 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18) !important;
 }
 

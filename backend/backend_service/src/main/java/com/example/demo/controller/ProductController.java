@@ -24,6 +24,14 @@ public class ProductController {
         return productService.getProductsForUser(authentication.getName());
     }
 
+    @GetMapping("/search")
+    public List<ProductResponse> searchProducts(
+            @RequestParam String search,
+            @RequestParam(required = false, defaultValue = "0") int limit,
+            Authentication authentication) {
+        return productService.searchProducts(authentication.getName(), search, limit);
+    }
+
     @GetMapping("/priced")
     public List<ProductResponse> getPricedProducts(
             @RequestParam(required = false) String category,

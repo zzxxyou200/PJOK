@@ -9,8 +9,13 @@ import Login from './pages/APP/Login';
 import Register from './pages/APP/Register';
 import Products from './pages/product/Products';
 import ProductDetail from './pages/product/ProductDetail';
+import SearchResults from './pages/search/SearchResults';
 import Cart from './pages/cart/Cart';
 import PurchaseHistory from './pages/history/PurchaseHistory';
+import AdminOrders from './pages/admin/AdminOrders';
+import OrganizationSummary from './pages/admin/OrganizationSummary';
+import DailySales from './pages/admin/DailySales';
+import ProductSummary from './pages/admin/ProductSummary';
 import Profile from './pages/profile/Profile';
 import './App.css';
 
@@ -28,8 +33,13 @@ function Shell() {
           <Route path="/register" element={<Register />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:productId" element={<ProductDetail />} />
+          <Route path="/search" element={<SearchResults />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/purchase-history" element={<PurchaseHistory />} />
+          <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/organizations" element={<OrganizationSummary />} />
+          <Route path="/admin/sales/daily" element={<DailySales />} />
+          <Route path="/admin/products/summary" element={<ProductSummary />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>
       </Layout>
